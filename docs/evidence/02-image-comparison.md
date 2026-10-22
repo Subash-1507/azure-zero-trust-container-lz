@@ -16,3 +16,15 @@ API image, same code and same hash-locked dependencies. Scanned 2026-10-22 with 
 **Decision:** Wolfi. It is about 27 MB larger than distroless but has no known vulnerabilities, because it is rebuilt daily, while distroless inherits Debian's slower patch cycle.
 
 **Accepted trade-off:** the free Chainguard tier publishes only `latest`. The image is pinned by digest for reproducibility, and Dependabot proposes digest updates so it does not go stale.
+
+## Web tier
+
+| | Chainguard nginx (`app/web/Dockerfile`) |
+|---|---|
+| Image size | 29.4 MB |
+| Known CVEs | **0** |
+| User | non-root (UID 65532), including the nginx master process |
+| Shell in image | none |
+| Runtime test | read-only root filesystem (only `/tmp` writable), all capabilities dropped, no-new-privileges |
+| Security headers | Content-Security-Policy, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy no-referrer; server version hidden |
+| XSS test | `<script>alert(1)</script>` stored and rendered as text (`textContent`), never executed |

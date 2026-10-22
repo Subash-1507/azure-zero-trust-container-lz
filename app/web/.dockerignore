@@ -1,0 +1,4 @@
+# Allowlist: only the nginx config and static files may enter the build context
+*
+!nginx.conf
+!static/
