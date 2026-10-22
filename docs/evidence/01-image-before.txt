@@ -1,0 +1,11 @@
+# BEFORE: naive API image (app/api/Dockerfile.naive)
+Scanned 2026-10-22 with Version: 0.76.1
+Size: 1.65GB
+User: uid=0(root) gid=0(root) groups=0(root)
+api:naive (debian 13.7)
+=======================
+Total: 3484 (UNKNOWN: 80, LOW: 1660, MEDIUM: 1311, HIGH: 409, CRITICAL: 24)
+--
+Python (python-pkg)
+===================
+Total: 9 (UNKNOWN: 0, LOW: 1, MEDIUM: 6, HIGH: 2, CRITICAL: 0)
