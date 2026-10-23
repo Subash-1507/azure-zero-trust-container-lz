@@ -1,0 +1,18 @@
+# Weekly update PRs. The docker entries refresh the digest-pinned Chainguard base images,
+# which keeps the "0 CVEs" result true over time.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directories:
+      - /app/api
+      - /app/web
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /app/api
+    schedule:
+      interval: weekly
