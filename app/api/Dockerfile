@@ -3,12 +3,12 @@
 # checkov:skip=CKV_DOCKER_2: Kubernetes ignores Docker HEALTHCHECK; liveness/readiness probes on /healthz are defined in the Kubernetes manifests
 
 # ---- build stage: stays on the image's non-root user and installs hash-locked deps into /tmp
-FROM cgr.dev/chainguard/python:latest-dev@sha256:7108dea9b9f31c30c20d43d17ecc61d4eb33789e9a8a10cd361e2ed37d8bd931 AS build
+FROM cgr.dev/chainguard/python:latest-dev@sha256:9bff0d7edba90589c302b2e08014340b0b4c718fba28ff0326b519771e379c0a AS build
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --require-hashes --only-binary=:all: --target /tmp/deps -r /tmp/requirements.txt
 
 # ---- runtime stage: no shell, no package manager, non-root; files owned by root so the app cannot modify its own code
-FROM cgr.dev/chainguard/python:latest@sha256:93c92d4ee2d0a4e540ec4de4e708267b45c2551a3c836fdf3e174a05017a76de
+FROM cgr.dev/chainguard/python:latest@sha256:8d518c3454134ac288e7efd0460d0e9856a046f60e23dc0d2cd02161195bda3e
 WORKDIR /app
 COPY --from=build /tmp/deps ./deps
 COPY src/ ./src/
