@@ -1,0 +1,27 @@
+{
+  "properties": {
+    "displayName": "Require Environment, CostCenter and DataClassification tags",
+    "description": "Denies resources that are missing the governance tags, or whose DataClassification is not an approved value.",
+    "mode": "Indexed",
+    "metadata": { "category": "Tags", "version": "1.0.0" },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "allowedValues": ["Audit", "Deny", "Disabled"],
+        "defaultValue": "Deny",
+        "metadata": { "displayName": "Effect" }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "anyOf": [
+          { "field": "tags['Environment']", "exists": "false" },
+          { "field": "tags['CostCenter']", "exists": "false" },
+          { "field": "tags['DataClassification']", "exists": "false" },
+          { "field": "tags['DataClassification']", "notIn": ["Public", "Internal", "Confidential", "Restricted"] }
+        ]
+      },
+      "then": { "effect": "[parameters('effect')]" }
+    }
+  }
+}
