@@ -1,7 +1,7 @@
 variable "location" {
   description = "Azure region. Limited to the regions the Azure for Students policy allows."
   type        = string
-  default     = "southeastasia"
+  default     = "koreacentral"
 
   validation {
     condition     = contains(["southeastasia", "uaenorth", "koreacentral", "malaysiawest", "austriaeast"], var.location)
