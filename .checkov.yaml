@@ -3,6 +3,7 @@
 # Every suppression must be inline, next to the code, with a reason.
 framework:
   - dockerfile
+  - terraform
   - github_actions
   - secrets
 skip-path:

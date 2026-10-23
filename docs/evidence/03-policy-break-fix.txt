@@ -1,0 +1,117 @@
+# Break-fix test 2: Azure Policy at the Azure Resource Manager layer (2026-10-23)
+
+## A. Storage account WITHOUT governance tags (expect: denied)
+ERROR: (RequestDisallowedByPolicy) Resource 'stnotags28056' was disallowed by policy. Reasons: 'Blocked by the zero-trust container landing zone guardrails (github.com/Subash-1507/azure-zero-trust-container-lz).'. See error details for policy resource IDs.
+Code: RequestDisallowedByPolicy
+Message: Resource 'stnotags28056' was disallowed by policy. Reasons: 'Blocked by the zero-trust container landing zone guardrails (github.com/Subash-1507/azure-zero-trust-container-lz).'. See error details for policy resource IDs.
+Target: stnotags28056
+Additional Information:Type: PolicyViolation
+Info: {
+    "evaluationDetails": {
+        "evaluatedExpressions": [
+            {
+                "result": "True",
+                "expressionKind": "Field",
+                "expression": "tags['Environment']",
+                "path": "tags['Environment']",
+                "targetValue": "false",
+                "operator": "Exists"
+            }
+        ],
+        "reason": "Blocked by the zero-trust container landing zone guardrails (github.com/Subash-1507/azure-zero-trust-container-lz)."
+    },
+    "policyDefinitionId": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/policyDefinitions/ztlz-require-governance-tags",
+    "policySetDefinitionId": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/policySetDefinitions/ztlz-zero-trust-containers",
+    "policyDefinitionReferenceId": "require-governance-tags",
+    "policySetDefinitionName": "ztlz-zero-trust-containers",
+    "policySetDefinitionDisplayName": "Zero-trust containers (azure-zero-trust-container-lz)",
+    "policySetDefinitionVersion": "1.0.0",
+    "policyDefinitionName": "ztlz-require-governance-tags",
+    "policyDefinitionDisplayName": "Require Environment, CostCenter and DataClassification tags",
+    "policyDefinitionVersion": "1.0.0",
+    "policyDefinitionEffect": "Deny",
+    "policyAssignmentId": "/subscriptions/<subscription-id>/resourceGroups/rg-ztlz-dev/providers/Microsoft.Authorization/policyAssignments/ztlz-zero-trust",
+    "policyAssignmentName": "ztlz-zero-trust",
+    "policyAssignmentDisplayName": "Zero-trust containers",
+    "policyAssignmentScope": "/subscriptions/<subscription-id>/resourceGroups/rg-ztlz-dev",
+    "policyAssignmentParameters": {},
+    "policyExemptionIds": [],
+    "policyEnrollmentIds": []
+}
+
+## B. Key Vault WITH tags but WITHOUT a firewall (expect: denied)
+ERROR: (RequestDisallowedByPolicy) Resource 'kvopen24683' was disallowed by policy. Reasons: 'Blocked by the zero-trust container landing zone guardrails (github.com/Subash-1507/azure-zero-trust-container-lz).'. See error details for policy resource IDs.
+Code: RequestDisallowedByPolicy
+Message: Resource 'kvopen24683' was disallowed by policy. Reasons: 'Blocked by the zero-trust container landing zone guardrails (github.com/Subash-1507/azure-zero-trust-container-lz).'. See error details for policy resource IDs.
+Target: kvopen24683
+Additional Information:Type: PolicyViolation
+Info: {
+    "evaluationDetails": {
+        "evaluatedExpressions": [
+            {
+                "result": "True",
+                "expressionKind": "Field",
+                "expression": "type",
+                "path": "type",
+                "expressionValue": "Microsoft.KeyVault/vaults",
+                "targetValue": "Microsoft.KeyVault/vaults",
+                "operator": "Equals"
+            },
+            {
+                "result": "True",
+                "expressionKind": "Field",
+                "expression": "Microsoft.KeyVault/vaults/createMode",
+                "path": "properties.createMode",
+                "targetValue": "recover",
+                "operator": "NotEquals"
+            },
+            {
+                "result": "True",
+                "expressionKind": "Field",
+                "expression": "Microsoft.KeyVault/vaults/networkAcls.defaultAction",
+                "path": "properties.networkAcls.defaultAction",
+                "expressionValue": "Allow",
+                "targetValue": "Deny",
+                "operator": "NotEquals"
+            },
+            {
+                "result": "True",
+                "expressionKind": "Value",
+                "expression": "[requestContext().apiVersion]",
+                "expressionValue": "2026-02-01",
+                "targetValue": "2021-06-01-preview",
+                "operator": "GreaterOrEquals"
+            },
+            {
+                "result": "True",
+                "expressionKind": "Field",
+                "expression": "Microsoft.KeyVault/vaults/publicNetworkAccess",
+                "path": "properties.publicNetworkAccess",
+                "targetValue": "Disabled",
+                "operator": "NotEquals"
+            }
+        ],
+        "reason": "Blocked by the zero-trust container landing zone guardrails (github.com/Subash-1507/azure-zero-trust-container-lz)."
+    },
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/55615ac9-af46-4a59-874e-391cc3dfb490",
+    "policySetDefinitionId": "/subscriptions/<subscription-id>/providers/Microsoft.Authorization/policySetDefinitions/ztlz-zero-trust-containers",
+    "policyDefinitionReferenceId": "key-vault-firewall",
+    "policySetDefinitionName": "ztlz-zero-trust-containers",
+    "policySetDefinitionDisplayName": "Zero-trust containers (azure-zero-trust-container-lz)",
+    "policySetDefinitionVersion": "1.0.0",
+    "policyDefinitionName": "55615ac9-af46-4a59-874e-391cc3dfb490",
+    "policyDefinitionDisplayName": "Azure Key Vault should have firewall enabled or public network access disabled",
+    "policyDefinitionVersion": "3.3.0",
+    "policyDefinitionEffect": "Deny",
+    "policyAssignmentId": "/subscriptions/<subscription-id>/resourceGroups/rg-ztlz-dev/providers/Microsoft.Authorization/policyAssignments/ztlz-zero-trust",
+    "policyAssignmentName": "ztlz-zero-trust",
+    "policyAssignmentDisplayName": "Zero-trust containers",
+    "policyAssignmentScope": "/subscriptions/<subscription-id>/resourceGroups/rg-ztlz-dev",
+    "policyAssignmentParameters": {},
+    "policyExemptionIds": [],
+    "policyEnrollmentIds": []
+}
+
+## C. Positive control: compliant tagged storage account (expect: allowed, then deleted)
+ALLOWED: stcompliant5710 created
+cleaned up stcompliant5710
