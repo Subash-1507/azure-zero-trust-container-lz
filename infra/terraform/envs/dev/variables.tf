@@ -14,3 +14,13 @@ variable "cost_center" {
   type        = string
   default     = "portfolio"
 }
+
+variable "admin_ip" {
+  description = "Your current public IP, allowed through the Key Vault and Storage firewalls only while Terraform creates them."
+  type        = string
+
+  validation {
+    condition     = can(cidrhost("${var.admin_ip}/32", 0)) && var.admin_ip != "0.0.0.0"
+    error_message = "Give a single public IPv4 address, e.g. 20.1.2.3."
+  }
+}

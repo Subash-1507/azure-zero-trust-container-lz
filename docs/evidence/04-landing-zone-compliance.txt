@@ -1,0 +1,12 @@
+# Landing zone compliance: initiative 'Zero-trust containers', scope rg-ztlz-dev, 2026-10-23
+
+Policy (reference ID)            Effect  Compliant  Non-compliant resources
+------------------------------------------------------------------------------------------
+acr-public-access-disabled       audit   0          acrztlzdev5hksd
+acr-sku-supports-private-link    audit   0          acrztlzdev5hksd
+acr-uses-private-link            audit   0          acrztlzdev5hksd
+key-vault-firewall               deny    1          -
+require-governance-tags          deny    5          -
+
+Non-compliant: only the 3 ACR Audit policies on the registry (budget mode: ACR Basic cannot disable public access or use Private Link).
+Kubernetes policies show no resources yet: they are evaluated once the AKS cluster exists (chapter 4).
