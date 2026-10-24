@@ -67,6 +67,54 @@ flowchart LR
 
 ---
 
+## Chapter 4 in pictures: the cluster
+
+**Who can reach the cluster, and how.** Three locks sit in front of the API server: my IP must be on the allow-list (opened only while I work), my Entra ID login must be valid, and Azure RBAC must grant the action. There is no static admin password to steal, because local accounts are disabled.
+
+```mermaid
+flowchart LR
+  me["Me in Codespaces<br/>az login with Entra ID"] -->|"from my IP only,<br/>opened just in time"| api
+  anon["Anyone else on the internet"] -.->|"❌ blocked: IP not on the allow-list"| api
+  admin["Static admin kubeconfig<br/>az aks get-credentials --admin"] -.->|"❌ refused: local accounts disabled"| api
+  subgraph aks["AKS cluster · Korea Central"]
+    api["API server<br/>allow-list: cluster egress IP + my IP"] -->|"Entra token checked,<br/>then Azure RBAC decides"| ok["✅ kubectl allowed"]
+    node["1 node · Standard_B4s_v2<br/>Azure Linux 3.0 · host encryption<br/>64 GB OS disk · auto security patches"]
+    addons["Add-ons<br/>Azure Policy (Gatekeeper) · Key Vault CSI<br/>Workload identity + OIDC · Defender sensor<br/>Image Cleaner"]
+  end
+  node -->|"pulls images with AcrPull<br/>(kubelet identity, no password)"| acr["Azure Container Registry"]
+  node -->|"all outbound traffic"| pip["Static egress IP"]
+```
+
+**The session routine.** The cluster is stopped when I am not using it, and my IP is added only for the length of a work session. Both are one command, and Terraform remains the single source of truth for the firewall rules.
+
+```mermaid
+sequenceDiagram
+  actor Me
+  participant S as scripts/aks-session.sh
+  participant TF as Terraform
+  participant AZ as Azure
+  Me->>S: start
+  S->>AZ: az aks start (node boots)
+  S->>TF: apply with admin_ip = my current IP
+  TF->>AZ: add my IP to the API server, Key Vault and Storage firewalls
+  S->>AZ: get-credentials + kubelogin (Entra ID login)
+  Note over Me,AZ: work session: kubectl, deploy, test
+  Me->>S: stop
+  S->>TF: apply without admin_ip
+  TF->>AZ: remove my IP everywhere
+  S->>AZ: az aks stop
+  AZ-->>Me: power state Stopped (the node costs nothing)
+```
+
+**Problems I solved along the way**
+- **No usable VM sizes in Southeast Asia:** my subscription was offered only Arm64 sizes there, so I moved the landing zone to Korea Central ([ADR 0001](docs/decisions/0001-region-koreacentral.md)).
+- **The first node ran out of room:** a 2 vCPU node with a 32 GB disk hit `DiskPressure`, with 86% of its CPU already requested by system add-ons. I rebuilt it on 4 vCPU with a 64 GB disk, and requested CPU dropped to 52%.
+- **The evidence must be honest:** a wrong query field showed the node OS upgrade channel as `null`. I checked the real value (`SecurityPatch`) and corrected the evidence file instead of leaving it.
+
+Evidence: [docs/evidence/05-aks-cluster.txt](docs/evidence/05-aks-cluster.txt)
+
+---
+
 ## Security controls
 
 | Risk | Control | Enforced by |
