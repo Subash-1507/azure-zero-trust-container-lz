@@ -71,14 +71,13 @@ resource "azurerm_key_vault" "app" {
     default_action             = "Deny"
     bypass                     = "AzureServices"
     virtual_network_subnet_ids = [azurerm_subnet.aks.id]
-    ip_rules                   = ["${var.admin_ip}/32"] # just-in-time: needed at creation, removed afterwards
+    ip_rules                   = [for ip in local.admin_ips : "${ip}/32"] # my IP only while I work (just in time)
   }
 
   tags = local.tags
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [network_acls[0].ip_rules] # admin IPs are added and removed just in time, outside Terraform
   }
 }
 
@@ -122,13 +121,12 @@ resource "azurerm_storage_account" "data" {
     default_action             = "Deny"
     bypass                     = ["AzureServices"]
     virtual_network_subnet_ids = [azurerm_subnet.aks.id]
-    ip_rules                   = [var.admin_ip] # storage firewall takes a bare IP, not /32
+    ip_rules                   = local.admin_ips # storage firewall takes bare IPs, not /32
   }
 
   tags = local.tags
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [network_rules[0].ip_rules]
   }
 }

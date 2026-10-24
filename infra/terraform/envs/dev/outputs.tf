@@ -27,3 +27,18 @@ output "storage_account_name" {
   description = "Storage account for the notes table."
   value       = azurerm_storage_account.data.name
 }
+
+output "aks_name" {
+  description = "AKS cluster name."
+  value       = azurerm_kubernetes_cluster.aks.name
+}
+
+output "aks_egress_ip" {
+  description = "The cluster's only outbound IP (also its permanent API server allow-list entry)."
+  value       = azurerm_public_ip.aks_egress.ip_address
+}
+
+output "aks_oidc_issuer_url" {
+  description = "OIDC issuer used by workload identity federation."
+  value       = azurerm_kubernetes_cluster.aks.oidc_issuer_url
+}
