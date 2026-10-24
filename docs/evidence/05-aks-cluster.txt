@@ -1,0 +1,39 @@
+# AKS cluster security settings, 2026-10-24
+authorizedIpRangeCount: 2
+azurePolicy: true
+defenderSensor: true
+entraIdAzureRbac: true
+hostEncryption: true
+imageCleaner: true
+k8sUpgrade: patch
+keyVaultCsi: true
+kubernetesVersion: 1.36.4
+localAccountsDisabled: true
+networkPlugin: azure
+networkPolicy: calico
+nodeOsUpgrade: SecurityPatch
+nodeSize: Standard_B4s_v2
+oidcIssuer: true
+osDiskGB: 64
+osSku: AzureLinux
+pluginMode: overlay
+runCommandDisabled: true
+sku: Free
+workloadIdentity: true
+
+# Local admin credentials request (must be refused):
+Getting static credential is not allowed because this cluster is set to disable local accounts.
+
+# Add-ons running on the node:
+gatekeeper-system/gatekeeper-audit-6c474cbb89-gffk5 Running
+gatekeeper-system/gatekeeper-controller-b78c56cf-kdq6z Running
+gatekeeper-system/gatekeeper-controller-b78c56cf-wcr2k Running
+kube-system/aks-secrets-store-csi-driver-pjzql Running
+kube-system/aks-secrets-store-provider-azure-8w5kr Running
+kube-system/azure-policy-868dfb7785-vtdvl Running
+kube-system/azure-policy-webhook-7764d4f85c-7tq56 Running
+kube-system/eraser-aks-system-35193073-vmss000000-qf2rz Running
+kube-system/eraser-controller-manager-65bbd44c94-xv5bz Running
+kube-system/microsoft-defender-collector-ds-ctffd Running
+kube-system/microsoft-defender-collector-misc-7448bc876f-sv79g Running
+kube-system/microsoft-defender-publisher-ds-gsq9g Running

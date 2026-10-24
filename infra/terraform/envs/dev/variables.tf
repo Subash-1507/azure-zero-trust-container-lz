@@ -16,11 +16,24 @@ variable "cost_center" {
 }
 
 variable "admin_ip" {
-  description = "Your current public IP, allowed through the Key Vault and Storage firewalls only while Terraform creates them."
+  description = "Your current public IP for just-in-time access (API server, Key Vault, Storage). Empty = door closed."
   type        = string
+  default     = ""
 
   validation {
-    condition     = can(cidrhost("${var.admin_ip}/32", 0)) && var.admin_ip != "0.0.0.0"
-    error_message = "Give a single public IPv4 address, e.g. 20.1.2.3."
+    condition     = var.admin_ip == "" || (can(cidrhost("${var.admin_ip}/32", 0)) && var.admin_ip != "0.0.0.0")
+    error_message = "Give a single public IPv4 address, e.g. 20.1.2.3, or leave it empty."
   }
+}
+
+variable "aks_node_size" {
+  description = "VM size of the single system node (x64, 4 vCPU, 16 GB; see ADR 0001)."
+  type        = string
+  default     = "Standard_B4s_v2"
+}
+
+variable "kubernetes_version" {
+  description = "AKS Kubernetes minor version; patches are applied automatically."
+  type        = string
+  default     = "1.36"
 }

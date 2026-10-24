@@ -60,7 +60,7 @@ flowchart LR
 | ✅ | **1. Hardened images** | Build a deliberately naive image first, then a hardened multi-stage, distroless, non-root version | **Before/after: image size and CVE count** |
 | ✅ | **2. Guardrails first** | Custom and built-in Azure Policies, grouped into one initiative, assigned **before** any resource exists | Compliance blade, policy JSON |
 | ✅ | **3. Landing zone** | VNet, Container Registry, Key Vault and Storage, each locked down | Resource configuration |
-| ⬜ | **4. The cluster** | AKS with the Azure Policy add-on, workload identity, Entra ID-only access, Defender for Containers | Cluster security settings |
+| ✅ | **4. The cluster** | AKS with the Azure Policy add-on, workload identity, Entra ID-only access, Defender for Containers | Cluster security settings |
 | ⬜ | **5. Deploy the app** | Kubernetes manifests with strict security contexts, default-deny network policy, secrets from Key Vault | Running app, no secrets in the cluster |
 | ⬜ | **6. Break-fix tests** | Three deliberate violations (below) | **Screenshots of each block or alert** |
 | ⬜ | **7. Compliance and teardown** | Map controls to NIST SP 800-190 and CIS, then delete everything | Mapping table, cost report |

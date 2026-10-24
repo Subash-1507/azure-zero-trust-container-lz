@@ -25,3 +25,10 @@ Terraform state stays in Southeast Asia (it is not part of the workload).
 - Lesson recorded: Azure Resource Manager is eventually consistent. Recreating a resource group with the same
   name immediately after deleting it produced stale 404s. Recovery used `terraform import` and `untaint`, and
   waiting for consistency instead of re-applying on stale reads.
+## Update (2026-10-24): node size
+
+The first cluster used `Standard_B2s_v2` with a 32 GB OS disk. The node went into `DiskPressure` (AKS node images
+pre-cache system images), and the system add-ons alone requested 86% of its 2 vCPUs, leaving no room for the
+Defender sensor or the application. The cluster now runs on `Standard_B4s_v2` (4 vCPU, 16 GB) with a 64 GB OS disk.
+It was recreated rather than resized, because an in-place rotation would temporarily need 8 vCPUs, above this
+subscription's regional quota of 6. The cluster is stopped whenever it is not in use.
