@@ -11,7 +11,7 @@ kubernetesVersion: 1.36.4
 localAccountsDisabled: true
 networkPlugin: azure
 networkPolicy: calico
-nodeOsUpgrade: null
+nodeOsUpgrade: SecurityPatch
 nodeSize: Standard_B4s_v2
 oidcIssuer: true
 osDiskGB: 64
@@ -22,7 +22,6 @@ sku: Free
 workloadIdentity: true
 
 # Local admin credentials request (must be refused):
-Getting static credential is not allowed because this cluster is set to disable local accounts.
 Getting static credential is not allowed because this cluster is set to disable local accounts.
 
 # Add-ons running on the node:
