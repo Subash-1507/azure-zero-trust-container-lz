@@ -1,0 +1,50 @@
+# Notes app on AKS: zero-trust deployment, 2026-10-25
+
+## Namespace Pod Security level
+restricted
+
+## Workloads: images pinned by digest from the private registry
+POD                    READY   IMAGE
+api-574f46944d-m8lhv   true    acrztlzdevmz2wp.azurecr.io/notes-api@sha256:d2cf7f1363e62295d74d2f92e843a0666a46fcc95dcfca669e73f58a90b5f54f
+web-7cb56fc64f-vj64h   true    acrztlzdevmz2wp.azurecr.io/notes-web@sha256:d1452dddae6d0ab2418923ab967da778a444dbf7f5d510c50b0c2d0d1e457640
+
+## Hardening per deployment
+DEPLOY   NON_ROOT   UID     READ_ONLY_FS   PRIV_ESC   CAPS_DROPPED   SA_TOKEN
+api      true       65532   true           false      [ALL]          false
+web      true       65532   true           false      [ALL]          false
+
+## Kubernetes Secrets in the namespace (the Key Vault value is only a mounted file)
+No resources found in notes namespace.
+
+## Greeting served through web -> api, read from Key Vault by workload identity
+{"greeting":"Hello from Key Vault, delivered by workload identity","source":"key-vault"}
+
+## Notes persisted in Azure Table Storage (survived an api pod restart)
+[{"id":"eb459563be4b44e08d4e39ffe25402ec","text":"stored with workload identity, no keys"}]
+
+## Network policies (default deny, then explicit allows)
+allow-dns
+api-from-web
+api-to-azure-https
+default-deny-all
+web-to-api
+
+## The api identity's only roles
+Key Vault Secrets User	.../Microsoft.KeyVault/vaults/kv-ztlz-dev-mz2wp
+Storage Table Data Contributor	.../Microsoft.Storage/storageAccounts/stztlzdevmz2wp/tableServices/default/tables/notes
+
+## My own admin account against the notes table
+Storage data roles on the app storage account: none (my only data role is on the separate Terraform state container)
+Shared key access: false
+Data-plane query from my Codespace: AuthorizationFailure (refused by the storage firewall before RBAC is even evaluated)
+
+## Gatekeeper (Azure Policy) findings in the notes namespace
+Deny constraints (this project's initiative) violated: 0
+Audit-only findings: 4
+ - [dryrun] K8sAzureV1ServiceAllowedPorts: Port 8080 for service web has not been allowed.
+ - [dryrun] K8sAzureV1ServiceAllowedPorts: Port 8080 for service api has not been allowed.
+ - [dryrun] K8sAzureV2ContainerAllowedImages: Container image acrztlzdevmz2wp.azurecr.io/notes-web@sha256:d1452dddae6d0ab2418923ab967da778a444dbf7f5d510c50b0c2d0d1e457640 for container web has not been allowed.
+ - [dryrun] K8sAzureV2ContainerAllowedImages: Container image acrztlzdevmz2wp.azurecr.io/notes-api@sha256:d2cf7f1363e62295d74d2f92e843a0666a46fcc95dcfca669e73f58a90b5f54f for container api has not been allowed.
+Note: the audit-only findings come from the Defender for Cloud default benchmark, whose 'allowed images' and
+'allowed service ports' policies are assigned with empty parameters, so they flag every image and port.
+This project's own deny constraint (only acrztlzdevmz2wp.azurecr.io images) admitted both pods.

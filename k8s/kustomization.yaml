@@ -1,0 +1,43 @@
+# Notes app on AKS. Deploy with scripts/deploy-app.sh: it writes the git-ignored azure.env from Terraform outputs,
+# so tenant, client and vault identifiers never live in the repository.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: notes
+
+resources:
+  - namespace.yaml
+  - service-accounts.yaml
+  - secret-provider-class.yaml
+  - api.yaml
+  - web.yaml
+  - network-policies.yaml
+
+configMapGenerator:
+  - name: azure-config
+    envs:
+      - azure.env
+
+# Pinned by digest: what CI scanned is exactly what runs, and a re-pushed tag cannot change it
+images:
+  - name: notes-api
+    newName: acrztlzdevmz2wp.azurecr.io/notes-api
+    digest: sha256:d2cf7f1363e62295d74d2f92e843a0666a46fcc95dcfca669e73f58a90b5f54f
+  - name: notes-web
+    newName: acrztlzdevmz2wp.azurecr.io/notes-web
+    digest: sha256:d1452dddae6d0ab2418923ab967da778a444dbf7f5d510c50b0c2d0d1e457640
+
+replacements:
+  - source: { kind: ConfigMap, name: azure-config, fieldPath: data.API_CLIENT_ID }
+    targets:
+      - select: { kind: ServiceAccount, name: api }
+        fieldPaths: ["metadata.annotations.[azure.workload.identity/client-id]"]
+      - select: { kind: SecretProviderClass, name: notes-kv }
+        fieldPaths: [spec.parameters.clientID]
+  - source: { kind: ConfigMap, name: azure-config, fieldPath: data.TENANT_ID }
+    targets:
+      - select: { kind: SecretProviderClass, name: notes-kv }
+        fieldPaths: [spec.parameters.tenantId]
+  - source: { kind: ConfigMap, name: azure-config, fieldPath: data.KEY_VAULT_NAME }
+    targets:
+      - select: { kind: SecretProviderClass, name: notes-kv }
+        fieldPaths: [spec.parameters.keyvaultName]
