@@ -42,3 +42,13 @@ output "aks_oidc_issuer_url" {
   description = "OIDC issuer used by workload identity federation."
   value       = azurerm_kubernetes_cluster.aks.oidc_issuer_url
 }
+
+output "api_identity_client_id" {
+  description = "Client ID the api service account and the SecretProviderClass use for workload identity (not a secret)."
+  value       = azurerm_user_assigned_identity.api.client_id
+}
+
+output "tenant_id" {
+  description = "Entra tenant for the SecretProviderClass (not a secret, but kept out of the repo)."
+  value       = data.azurerm_client_config.current.tenant_id
+}
