@@ -1,0 +1,85 @@
+# Break-fix tests 1 and 3: admission control, image scanning and runtime detection on AKS, 2026-10-27
+
+## Test 1: untrusted, root, privileged pod in namespace 'breakfix' (no Pod Security labels)
+Manifest: tests/break-fix/01-untrusted-root-pod.yaml
+Error from server (Forbidden): error when creating "tests/break-fix/01-untrusted-root-pod.yaml": admission webhook "validation.gatekeeper.sh" denied the request: [azurepolicy-k8sazurev2containerallowedimag-60aa12c2e9f41344a4ef] Container image docker.io/library/nginx:latest for container nginx has not been allowed. For more information, visit https://aka.ms/aks/deployment-safeguards
+[azurepolicy-k8sazurev3allowedusersgroups-aa78d79f1bd648c6bac3] Container nginx is attempting to run as disallowed user 0. Allowed runAsUser: {"ranges": [], "rule": "MustRunAsNonRoot"}. For more information, visit https://aka.ms/aks/deployment-safeguards
+[azurepolicy-k8sazurev4noprivilegeescalatio-4370ec83fb8c67c7d1eb] Privilege escalation container is not allowed: nginx. For more information, visit https://aka.ms/aks/deployment-safeguards
+[azurepolicy-k8sazurev2noprivilege-5fc0fe8d38223543612d] Privileged container is not allowed: nginx, securityContext: {"allowPrivilegeEscalation": true, "privileged": true, "readOnlyRootFilesystem": false, "runAsUser": 0}. For more information, visit https://aka.ms/aks/deployment-safeguards
+[azurepolicy-k8sazurev3readonlyrootfilesyst-8fce5a4ece7562180540] Readonly root filesystem is required for container. pod:'untrusted-root-nginx', container:'nginx'
+Result: denied by all 5 Kubernetes deny rules of this project's Azure Policy initiative. Nothing was created.
+
+## Test 1b: the same pod in namespace 'notes' (Pod Security Admission: restricted)
+Error from server (Forbidden): error when creating "tests/break-fix/01-untrusted-root-pod.yaml": pods "untrusted-root-nginx" is forbidden: violates PodSecurity "restricted:latest": privileged (container "nginx" must not set securityContext.privileged=true), allowPrivilegeEscalation != false (container "nginx" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nginx" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "nginx" must set securityContext.runAsNonRoot=true), runAsUser=0 (container "nginx" must not set runAsUser=0), seccompProfile (pod or container "nginx" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+Result: refused by Kubernetes' built-in Pod Security Admission, before the Gatekeeper webhook is even called.
+
+## Why both layers matter
+validation.gatekeeper.sh failurePolicy=Ignore
+Gatekeeper fails open: if its pods are down, the API server admits pods unchecked.
+Pod Security Admission runs inside the API server itself, so the app namespace stays protected either way.
+
+## Test 3a: outdated, vulnerable image in the registry
+Image: breakfix/nginx:1.14.2, imported from Docker Hub with az acr import
+Digest: sha256:f7988fb6c02e0ce69257d9bd9cf37ae20a60f1df7563c3a2a6abe24160306b8d
+Manifests created: 7 (1 multi-architecture index + 6 architectures)
+
+Trivy (the same scanner as the CI gate), linux/amd64:
+  OS: debian 9.8, end-of-life: true
+  Total CVEs: 216
+  CRITICAL: 31
+  HIGH: 82
+  LOW: 42
+  MEDIUM: 54
+  UNKNOWN: 7
+  Fixable HIGH/CRITICAL (what fails the CI gate): 77
+  Examples (CRITICAL):
+    CVE-2022-1664  dpkg  fixed in: 1.18.26
+    CVE-2019-20367  libbsd0  fixed in: 0.8.3-1+deb9u1
+    CVE-2019-12900  libbz2-1.0  fixed in: no fix
+    CVE-2019-8457  libdb5.3  fixed in: no fix
+    CVE-2022-22822  libexpat1  fixed in: 2.2.0-2+deb9u4
+
+Defender for Containers registry scan (findings visible about 40 minutes after import), one row per fix:
+Recommendation    Images    Max_cvss    Fixed_in
+----------------  --------  ----------  ---------------
+Update icu        6         9.8         57.1-6+deb9u4
+Update tiff       6         7.8         4.0.8-2+deb9u5
+Update apt        6         5.5         1.4.10
+Update expat      6         5.3         2.2.0-2+deb9u3
+Update systemd    6         4.5         232-25+deb9u11
+Update libpng1.6  6         3.3         1.6.28-1+deb9u1
+Each recommendation covers all 6 architecture images. Also flagged: breakfix/ubuntu:24.04 -> 'Update zlib1g'
+(even a current official base image carries a known CVE; the app's distroless images have none).
+Two scanners, two views: Trivy lists every known CVE, including ones Debian 9 will never fix;
+Defender groups findings into the package updates that fix them. CI gate plus continuous monitoring, not one count.
+Screenshot: 07-defender-image-scan.png
+
+## Test 3b: suspicious process inside a fully compliant pod
+Manifest: tests/break-fix/03-defender-alert-pod.yaml (our registry, UID 65532, read-only root filesystem, all capabilities dropped)
+Admission: accepted (a compliant pod is not blocked)
+Action: cp /bin/echo /tmp/asc_alerttest_662jfi039n && /tmp/asc_alerttest_662jfi039n testing eicar pipe
+Defender for Containers alert (selected fields; subscription and resource IDs omitted):
+  Alert:           Microsoft Defender for Cloud test alert (not a threat).
+  Type:            K8S.NODE_EICAR
+  Severity:        High
+  MITRE tactic:    Execution
+  Process started: 2026-10-27T17:43:38.186441+00:00
+  Alert raised:    2026-10-27T17:45:16.475000+00:00
+  Cluster / node:  aks-ztlz-dev / aks-system-35193073-vmss000002
+  Origin:          Pod Container
+  Image:           acrztlzdevmz2wp.azurecr.io/breakfix/ubuntu:24.04
+  Parent process:  sh
+  Command line:    /tmp/asc_alerttest_662jfi039n testing eicar pipe
+Time from process start to alert: about 98 seconds.
+Screenshot: 07-defender-alert.png
+
+## Test 3b, second signal: control-plane test alert from the Kubernetes API audit log
+Action: kubectl get pods --namespace=asc-alerttest-662jfi039n (2026-10-27 17:43:39 UTC)
+  Alert:           Defender for Cloud test alert for Kubernetes (not a threat)
+  Type:            K8S_EicarAlert
+  Severity:        High
+  MITRE tactic:    Unknown
+  Activity:        2026-10-27T17:43:39.437044+00:00
+  Alert raised:    2026-10-27T18:02:43.716000+00:00
+  Cluster:         aks-ztlz-dev
+Time from request to alert: about 19 minutes (API audit log), versus about 98 seconds for the node sensor.

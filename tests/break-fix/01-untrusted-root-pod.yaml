@@ -1,0 +1,15 @@
+# Break-fix test 1: everything the guardrails forbid, in one pod.
+# Expected: the API server refuses it and lists every rule it breaks. Nothing is created.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: untrusted-root-nginx
+spec:
+  containers:
+    - name: nginx
+      image: docker.io/library/nginx:latest # untrusted registry (not our ACR)
+      securityContext:
+        runAsUser: 0                        # root
+        privileged: true                    # full access to the node
+        allowPrivilegeEscalation: true
+        readOnlyRootFilesystem: false       # writable filesystem
