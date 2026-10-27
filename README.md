@@ -173,9 +173,15 @@ flowchart LR
 - **Detection has two speeds.** The node sensor raised its alert in 98 seconds; the same test through the API audit log took 19 minutes. Fast response needs the sensor, not log analysis alone.
 - **Two scanners, two counts.** Trivy lists every known CVE, including ones Debian 9 will never fix; Defender groups findings into the package updates that fix them. One gates the pipeline, the other watches the registry continuously.
 
+**Test 3a:** Defender's findings for the outdated `nginx` image, one `Update <package>` recommendation per architecture image
+
+![Defender vulnerability recommendations for the outdated nginx image in my registry](docs/evidence/07-defender-image-scan.png)
+
+**Test 3b:** the runtime alert, with the command line, image and namespace of the suspicious process
+
 ![Defender for Cloud test alert raised for the break-fix pod](docs/evidence/07-defender-alert.png)
 
-Evidence: [docs/evidence/07-break-fix-admission-and-runtime.txt](docs/evidence/07-break-fix-admission-and-runtime.txt) and [the image scan screenshot](docs/evidence/07-defender-image-scan.png) · How to rerun: [tests/break-fix](tests/break-fix/)
+Evidence: [docs/evidence/07-break-fix-admission-and-runtime.txt](docs/evidence/07-break-fix-admission-and-runtime.txt) · How to rerun: [tests/break-fix](tests/break-fix/)
 
 ---
 
