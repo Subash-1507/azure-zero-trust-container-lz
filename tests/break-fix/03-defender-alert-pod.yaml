@@ -1,0 +1,32 @@
+# Break-fix test 3b: a fully compliant pod, used to trigger Defender for Containers' harmless test alert.
+# ACR_LOGIN_SERVER is filled in at apply time, so no registry name is hardcoded here.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: defender-alert-test
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+    - name: ubuntu
+      image: ACR_LOGIN_SERVER/breakfix/ubuntu:24.04
+      command: ["sleep", "3600"] # exits by itself after an hour
+      securityContext:
+        allowPrivilegeEscalation: false
+        privileged: false
+        readOnlyRootFilesystem: true
+        capabilities: { drop: [ALL] }
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { cpu: 100m, memory: 64Mi }
+      volumeMounts:
+        - { name: tmp, mountPath: /tmp } # the only writable path, used for the test binary
+  volumes:
+    - name: tmp
+      emptyDir: { sizeLimit: 16Mi }

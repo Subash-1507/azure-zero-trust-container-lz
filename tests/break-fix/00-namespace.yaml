@@ -1,0 +1,6 @@
+# Namespace for the break-fix tests. Deliberately no Pod Security labels,
+# so Azure Policy (Gatekeeper) is the only gate in test 1.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: breakfix

@@ -62,7 +62,7 @@ flowchart LR
 | ✅ | **3. Landing zone** | VNet, Container Registry, Key Vault and Storage, each locked down | Resource configuration |
 | ✅ | **4. The cluster** | AKS with the Azure Policy add-on, workload identity, Entra ID-only access, Defender for Containers | Cluster security settings |
 | ✅ | **5. Deploy the app** | Kubernetes manifests with strict security contexts, default-deny network policy, secrets from Key Vault | Running app, no secrets in the cluster |
-| ⬜ | **6. Break-fix tests** | Three deliberate violations (below) | **Screenshots of each block or alert** |
+| ✅ | **6. Break-fix tests** | Three deliberate violations (below) | **Screenshots of each block or alert** |
 | ⬜ | **7. Compliance and teardown** | Map controls to NIST SP 800-190 and CIS, then delete everything | Mapping table, cost report |
 
 ---
@@ -139,6 +139,44 @@ Evidence: [docs/evidence/05-aks-cluster.txt](docs/evidence/05-aks-cluster.txt)
 | 2 | Create Azure resources **without governance tags** and a Key Vault **with no firewall** | Azure Resource Manager **refuses** the request (`RequestDisallowedByPolicy`) |
 | 3 | Push a deliberately **outdated, vulnerable image** and simulate suspicious activity in the cluster | Defender **reports the CVEs** and raises a **security alert** |
 
+### Chapter 6 results: what actually happened
+
+| # | What I tried | What happened |
+|---|---|---|
+| 1 | `nginx` from **Docker Hub**, as **root**, **privileged**, with privilege escalation and a writable filesystem | ❌ **Denied** by Azure Policy (Gatekeeper), naming **all 5** broken rules. Nothing was created |
+| 1b | The same pod in the app namespace | ❌ **Denied** even earlier, by Kubernetes **Pod Security Admission** (`restricted`), with 6 violations |
+| 2 | An untagged storage account, and a Key Vault with no firewall | ❌ **Denied** by Azure Resource Manager (`RequestDisallowedByPolicy`), see [evidence 03](docs/evidence/03-policy-break-fix.txt) |
+| 3a | `nginx:1.14.2` (2019, Debian 9, end-of-life) imported into my registry | **Trivy:** 216 CVEs, 77 of them fixable HIGH/CRITICAL, so the CI gate would block it. **Defender:** 6 fix recommendations on all 6 architecture images, worst **CVSS 9.8**, about 40 minutes after import |
+| 3b | A suspicious process inside a **fully compliant** pod | ✅ Admitted, then 🚨 Defender raised a **High** alert (MITRE ATT&CK: Execution) **98 seconds** later, naming the image, node and command line. A second test through the API audit log raised a control-plane alert after **19 minutes** |
+
+```mermaid
+flowchart LR
+  t1["Test 1<br/>bad pod in breakfix"] --> gk
+  t1b["Test 1b<br/>bad pod in notes"] --> psa
+  t3b["Test 3b<br/>compliant pod"] --> gk
+  subgraph admission["Admission: before the pod exists"]
+    psa{"Pod Security Admission<br/>restricted · built into the API server"}
+    gk{"Azure Policy · Gatekeeper<br/>5 deny rules · fails open if down"}
+  end
+  psa -->|"❌ 6 violations"| refused1["Refused"]
+  gk -->|"❌ 5 of 5 rules broken"| refused2["Refused"]
+  gk -->|"✅ admitted"| pod["Pod running<br/>non-root · read-only"]
+  pod -->|"suspicious process"| sensor["Defender sensor<br/>on the node"]
+  sensor -->|"🚨 High alert in 98 s"| dfc["Defender for Cloud"]
+  t3c["Test 3b<br/>suspicious kubectl request"] -->|"API audit log<br/>🚨 alert in 19 min"| dfc
+  t3a["Test 3a<br/>nginx 1.14.2 in ACR"] -->|"registry scan"| dfc
+```
+
+**What the tests taught me**
+- **Gatekeeper fails open.** Its webhook runs with `failurePolicy: Ignore`, so if the policy engine is down, pods are admitted unchecked. Pod Security Admission lives inside the API server and cannot be "down", which is why the app namespace has both layers.
+- **Prevention alone is not enough.** The pod in test 3b broke no rule, yet ran a suspicious binary. Admission control judges what a pod *is*; only runtime detection sees what it *does*. That is the "assume breach" half of zero trust.
+- **Detection has two speeds.** The node sensor raised its alert in 98 seconds; the same test through the API audit log took 19 minutes. Fast response needs the sensor, not log analysis alone.
+- **Two scanners, two counts.** Trivy lists every known CVE, including ones Debian 9 will never fix; Defender groups findings into the package updates that fix them. One gates the pipeline, the other watches the registry continuously.
+
+![Defender for Cloud test alert raised for the break-fix pod](docs/evidence/07-defender-alert.png)
+
+Evidence: [docs/evidence/07-break-fix-admission-and-runtime.txt](docs/evidence/07-break-fix-admission-and-runtime.txt) and [the image scan screenshot](docs/evidence/07-defender-image-scan.png) · How to rerun: [tests/break-fix](tests/break-fix/)
+
 ---
 
 ## Honest trade-offs
@@ -150,6 +188,7 @@ This is a personal project on student credits, so I chose a **budget build** and
 | Container Registry on the **Basic** tier, reachable over the internet (Entra ID login required, admin user off) | Private endpoints and network rules need the Premium tier | Premium tier with a private endpoint; the matching policies switch from Audit to Deny |
 | Key Vault and Storage use **firewalls and VNet service endpoints**, not private endpoints | Private endpoints cost extra per endpoint | Private endpoints and private DNS zones |
 | AKS API server is public, restricted to my IP and Entra ID login | A private cluster needs a jump host | Private cluster |
+| Gatekeeper's webhook **fails open** (`failurePolicy: Ignore`, set by AKS) | AKS keeps the cluster manageable even if the policy engine fails | Pod Security Admission `restricted` on every app namespace (done here), plus an alert on Gatekeeper's health |
 
 **Cost plan:** about $8–12 of credits if built within a week, then **everything is deleted**. Defender for Containers runs on its free trial.
 
