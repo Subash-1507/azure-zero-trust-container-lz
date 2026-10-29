@@ -1,0 +1,36 @@
+# Cost and teardown, 2026-10-29
+
+## Actual cost from Azure Cost Management, 2026-10-22 to 2026-10-29 (data can lag up to about 24 hours)
+94.67 INR  mc_rg-ztlz-dev_aks-ztlz-dev_koreacentral  Virtual Machines
+91.12 INR  rg-ztlz-dev                               Container Registry
+54.1 INR   rg-ztlz-dev                               Virtual Network
+0.34 INR   rg-ztlz-dev                               Key Vault
+0.19 INR   mc_rg-ztlz-dev_aks-ztlz-dev_koreacentral  Storage
+0.07 INR   rg-ztlz-tfstate                           Bandwidth
+0.03 INR   rg-ztlz-tfstate                           Storage
+0.01 INR   rg-ztlz-dev                               Storage
+0 INR      mc_rg-ztlz-dev_aks-ztlz-dev_koreacentral  Bandwidth
+0 INR      mc_rg-ztlz-dev_aks-ztlz-dev_koreacentral  Load Balancer
+0 INR      rg-ztlz-dev                               Bandwidth
+0 INR      rg-ztlz-dev                               Microsoft Defender for Cloud
+Project total: 240.54 INR
+Defender for Containers (free trial) and Azure Monitor: 0.00. Budget in the README plan: USD 8-12.
+
+## Before teardown
+Resources in rg-ztlz-dev: 10
+Resources in the AKS node resource group: 6
+Entries in Terraform state: 28 (27 resources plus 1 read-only data source, which destroy does not count)
+
+## Teardown, 2026-10-29
+terraform destroy: 27 resources destroyed (AKS, registry, Key Vault, storage, network, Log Analytics, identities, role assignments, policy initiative and assignment)
+Resource groups with 'ztlz' in the name: 0
+Resources tagged Project=azure-zero-trust-container-lz: 0
+Custom policy definitions and initiatives: 0
+Defender for Containers plan: Free
+Key Vaults: soft-deleted under purge protection (no cost), purged automatically by Azure:
+  kv-ztlz-dev-mz2wp (koreacentral), deleted 2026-10-29, purge 2026-11-05
+  kv-ztlz-dev-5hksd (southeastasia, left by the chapter 3 region move), deleted 2026-10-23, purge 2026-10-30
+Terraform state resource group: deleted
+Network Watcher: NetworkWatcher_koreacentral, created automatically by Azure for the VNet, deleted; no resources left in koreacentral
+Defender plans still on Standard: FoundationalCspm and Discovery (free built-in posture plans, not created by this project; Defender for Cloud cost 0.00)
+The repository keeps prevent_destroy = true on Key Vault and Storage; it was lifted only locally for this teardown.
