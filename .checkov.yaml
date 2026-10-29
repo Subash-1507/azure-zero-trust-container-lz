@@ -1,13 +1,17 @@
-# Checkov runs against the whole repo in CI. Frameworks are added as the project grows
-# (terraform and kubernetes come with chapters 3-5).
+# Checkov runs against the whole repo in CI.
+# Kubernetes is scanned as deployed: CI renders k8s/ with kustomize into k8s-rendered.yaml (placeholder identifiers),
+# because the files in k8s/ are templates and kustomize adds the namespace and the image digests.
 # Every suppression must be inline, next to the code, with a reason.
 framework:
   - dockerfile
   - terraform
   - github_actions
+  - kubernetes
   - secrets
 skip-path:
   - .terraform
+  - k8s/             # templates; the rendered output is scanned instead
+  - tests/break-fix/ # insecure on purpose: these manifests exist to be refused by the cluster
 compact: true
 quiet: true
 download-external-modules: false
