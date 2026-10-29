@@ -2,7 +2,7 @@
 
 **Hardened Docker images, a locked-down AKS cluster, and Azure Policy guardrails that refuse anything unsafe, before it ever runs.**
 
-> 🚧 **Status: in progress.** This README tells the plan as a story; each chapter is ticked off as it is built, with evidence.
+> ✅ **Status: complete.** Built, attacked, mapped to NIST SP 800-190, then torn down on 29 Oct 2026. This README tells the story chapter by chapter, with evidence for each; everything can be rebuilt from this repository.
 > Part 2 of my DevSecOps portfolio. Part 1: [multicloud-secure-iac](https://github.com/Subash-1507/multicloud-secure-iac), secure infrastructure as code with keyless, approval-gated deployments.
 
 ---
@@ -63,7 +63,7 @@ flowchart LR
 | ✅ | **4. The cluster** | AKS with the Azure Policy add-on, workload identity, Entra ID-only access, Defender for Containers | Cluster security settings |
 | ✅ | **5. Deploy the app** | Kubernetes manifests with strict security contexts, default-deny network policy, secrets from Key Vault | Running app, no secrets in the cluster |
 | ✅ | **6. Break-fix tests** | Three deliberate violations (below) | **Screenshots of each block or alert** |
-| ⬜ | **7. Compliance and teardown** | Map controls to NIST SP 800-190 and CIS, then delete everything | Mapping table, cost report |
+| ✅ | **7. Compliance and teardown** | Map controls to NIST SP 800-190 and CIS, then delete everything | Mapping table, cost report |
 
 ---
 
@@ -187,6 +187,27 @@ Evidence: [docs/evidence/07-break-fix-admission-and-runtime.txt](docs/evidence/0
 
 ---
 
+## Chapter 7: compliance, cost and teardown
+
+**Compliance.** Every control is mapped to the 23 container risks of NIST SP 800-190 and to the CIS AKS Benchmark: **13 met, 10 partial**, each partial with its production alternative ([mapping](docs/compliance/nist-800-190-cis-mapping.md)). Chapter 6 had exposed a gap, Kubernetes manifests that CI never scanned, so CI now renders them with kustomize and Checkov scans what is actually deployed: **185 of 185** checks pass, while the deliberately insecure test pod fails 20 ([evidence 08](docs/evidence/08-checkov-kubernetes.txt)).
+
+**Cost.** Actual spend from Azure Cost Management, 22 to 29 October:
+
+| What | Cost (INR) | Why |
+|---|---|---|
+| AKS node (VM) | 94.67 | Billed only while the cluster ran; stopped between sessions |
+| Container Registry (Basic) | 91.12 | Fixed daily fee, even when idle |
+| Virtual network (static egress IP) | 54.10 | Fixed daily fee |
+| Key Vault, storage, state, bandwidth | 0.65 | |
+| Defender for Containers, Azure Monitor | 0.00 | Free trial and free tier |
+| **Total** | **240.54 (about $3)** | Planned: $8–12 |
+
+**Teardown.** `terraform destroy` removed all 27 resources. Afterwards: 0 resource groups, 0 tagged resources and 0 custom policies left; Defender for Containers back on Free; the Terraform state group deleted. Both Key Vaults stay soft-deleted under purge protection until Azure purges them, at no cost. The `prevent_destroy` safety catch was lifted only locally, so the code still protects Key Vault and Storage ([evidence 09](docs/evidence/09-cost-and-teardown.txt)).
+
+**What I would add for production:** a private cluster, ACR Premium with private endpoints, Azure Firewall for domain-based egress, separate system and user node pools, and DAST against a staging deployment. The [gaps table](docs/compliance/nist-800-190-cis-mapping.md#gaps-and-what-production-would-do) lists them all.
+
+---
+
 ## Honest trade-offs
 
 This is a personal project on student credits, so I chose a **budget build** and I am recording what that costs in security, the same way a real team records accepted risk:
@@ -198,20 +219,21 @@ This is a personal project on student credits, so I chose a **budget build** and
 | AKS API server is public, restricted to my IP and Entra ID login | A private cluster needs a jump host | Private cluster |
 | Gatekeeper's webhook **fails open** (`failurePolicy: Ignore`, set by AKS) | AKS keeps the cluster manageable even if the policy engine fails | Pod Security Admission `restricted` on every app namespace (done here), plus an alert on Gatekeeper's health |
 
-**Cost plan:** about $8–12 of credits if built within a week, then **everything is deleted**. Defender for Containers runs on its free trial.
+**Cost:** planned at $8–12 of credits; the real bill for the whole build was **₹240.54 (about $3)**, because the cluster was stopped between work sessions. Defender for Containers ran on its free trial. Everything was then deleted ([evidence 09](docs/evidence/09-cost-and-teardown.txt)).
 
 ---
 
-## Repository layout (planned)
+## Repository layout
 
 ```
 app/            web and api source, with hardened Dockerfiles
 policies/       custom Azure Policy definitions and the initiative (policy as code)
 infra/          Terraform: governance, network, registry, Key Vault, AKS, Defender
-k8s/            Kubernetes manifests: namespaces, deployments, network policies, identities
-tests/          the three break-fix scenarios
-docs/           architecture, compliance mapping, evidence screenshots
-.github/        CI security gates and the deployment workflow
+k8s/            Kubernetes manifests (kustomize): namespace, deployments, network policies, identities
+scripts/        work-session start/stop and app deployment
+tests/          break-fix tests (test 2 is recorded in evidence 03)
+docs/           compliance mapping, decision records and evidence
+.github/        CI security gates and Dependabot
 ```
 
 ---
