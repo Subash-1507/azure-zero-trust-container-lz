@@ -129,6 +129,8 @@ Evidence: [docs/evidence/05-aks-cluster.txt](docs/evidence/05-aks-cluster.txt)
 | Ungoverned resources | Environment, CostCenter and DataClassification tags required | **Custom Azure Policy (Deny)** |
 | Unauthorized cluster access | Entra ID authentication only, Kubernetes local accounts disabled | AKS configuration |
 
+Every control above is mapped to the 23 container risks of **NIST SP 800-190** and to the **CIS AKS Benchmark**, with evidence links and honest gaps: [docs/compliance/nist-800-190-cis-mapping.md](docs/compliance/nist-800-190-cis-mapping.md) (13 met, 10 partial with a documented production alternative).
+
 ---
 
 ## Break-fix tests: trying to break my own rules

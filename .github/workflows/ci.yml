@@ -89,6 +89,7 @@ jobs:
           upload-release-assets: false
 
   checkov:
+    # Name kept as is: branch protection requires this exact check name. It also scans Terraform and Kubernetes.
     name: Checkov (Dockerfiles, Actions, secrets)
     runs-on: ubuntu-latest
     permissions:
@@ -97,6 +98,13 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # k8s/ holds kustomize templates. Render them the way `kubectl apply -k` would, with placeholder
+      # identifiers, so Checkov scans what actually gets deployed (namespace and image digests included).
+      - name: Render Kubernetes manifests
+        run: |
+          cp k8s/azure.env.example k8s/azure.env
+          kubectl kustomize k8s > k8s-rendered.yaml
 
       - name: Checkov
         uses: bridgecrewio/checkov-action@c3e106d5f8f4253a6de5110efb41a080f83db294 # v12.3135.0
