@@ -1,7 +1,7 @@
 # Deliberately naive: the "before" picture. Do not deploy. See Dockerfile for the hardened version.
 # checkov:skip=CKV_DOCKER_2: deliberately insecure baseline kept only for the before/after evidence; never built in CI or deployed
 # checkov:skip=CKV_DOCKER_3: deliberately insecure baseline kept only for the before/after evidence; never built in CI or deployed
-FROM python:3.11
+FROM python:3.13
 WORKDIR /app
 COPY . .
 RUN pip install -r requirements.txt
